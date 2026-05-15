@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # 1. BASE DE DATOS
+  db:
+    image: mysql:8.0
+    container_name: innovatech-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: innovatech_db
+    ports:
+      - "3306:3306"
+    networks:
+      - innovatech-net
+    volumes:
+      - db-data:/var/lib/mysql # PASO 3: Persistencia de datos (Named Volume)
+
+  # 2. BACKEND DE VENTAS
+  backend-ventas:
+    build:
+      context: ./back-Ventas_SpringBoot # Ojo: Asegúrate que el nombre de la carpeta coincida
+    container_name: innovatech-backend-ventas
+    restart: on-failure
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/innovatech_db?useSSL=false&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=admin
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    networks:
+      - innovatech-net
+
+  # 3. BACKEND DE DESPACHOS
+  backend-despachos:
+    build:
+      context: ./back-Despachos_SpringBoot # Ojo: Asegúrate que el nombre de la carpeta coincida
+    container_name: innovatech-backend-despachos
+    restart: on-failure
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/innovatech_db?useSSL=false&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=admin
+    ports:
+      - "8081:8080" # Lo mapeamos al 8081 en tu PC para que no choque con el de ventas
+    depends_on:
+      - db
+    networks:
+      - innovatech-net
+
+  # 4. FRONTEND
+  frontend:
+    build:
+      context: ./front_despacho # Ojo: Asegúrate que el nombre de la carpeta coincida
+    container_name: innovatech-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend-ventas
+      - backend-despachos
+    networks:
+      - innovatech-net
+
+# CONFIGURACIÓN DE REDES INTERNAS (PASO 2)
+networks:
+  innovatech-net:
+    driver: bridge
+
+# CONFIGURACIÓN DE VOLÚMENES (PASO 3)
+volumes:
+  db-data:
+    name: innovatech-db-data
