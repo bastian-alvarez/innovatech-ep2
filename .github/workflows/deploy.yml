@@ -43,16 +43,18 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
+script: |
             mkdir -p ~/proyecto-innovatech
             cd ~/proyecto-innovatech
             
-            curl -O https://raw.githubusercontent.com/${{ github.repository }}/deploy/docker-compose.yml
+            # 1. Descargamos el archivo limpio desde GitHub
+            curl -L https://raw.githubusercontent.com/${{ github.repository }}/deploy/docker-compose.yml -o docker-compose.yml
             
-            sed -i 's|build:.*context:.*back-Ventas.*|image: ${{ secrets.DOCKER_USERNAME }}/innovatech-backend-ventas:latest|g' docker-compose.yml
-            sed -i 's|build:.*context:.*back-Despachos.*|image: ${{ secrets.DOCKER_USERNAME }}/innovatech-backend-despachos:latest|g' docker-compose.yml
-            sed -i 's|build:.*context:.*front_despacho.*|image: ${{ secrets.DOCKER_USERNAME }}/innovatech-frontend:latest|g' docker-compose.yml
-            
+            # 2. Forzamos a que use las imágenes de Docker Hub y no intente construir
+            # (Esto sobreescribe cualquier instrucción 'build' que se haya colado)
             sudo docker-compose down
             sudo docker-compose pull
             sudo docker-compose up -d
+            
+            # 3. Limpieza de imágenes huérfanas para ahorrar espacio
+            sudo docker image prune -f
